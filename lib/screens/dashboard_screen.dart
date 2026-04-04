@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
-import '../main.dart' show repo, currencyNotifier, profileImageNotifier, navigationIndexNotifier;
+import '../main.dart' show repo, currencyNotifier, profileImageNotifier, navigationIndexNotifier, budgetNotifier;
 import '../models/expense.dart';
 import 'add_expense_screen.dart';
 
@@ -19,7 +19,6 @@ class DashboardScreenState extends State<DashboardScreen> {
   double _totalSpentLastMonth = 0;
   double _savings = 0;
   double _budgetPercentage = 0;
-  Map<String, double> _categorySpending = {};
   bool _loading = true;
 
   @override
@@ -32,18 +31,21 @@ class DashboardScreenState extends State<DashboardScreen> {
     final expenses = await repo.getAllExpenses();
     final totalThisMonth = await repo.getTotalSpentThisMonth();
     final totalLastMonth = await repo.getTotalSpentLastMonth();
-    final savings = await repo.getSavings();
-    final budgetPercentage = await repo.getBudgetPercentage();
-    final categorySpending = await repo.getCategorySpending();
+
+    // Calculate savings based on budget
+    final budget = budgetNotifier.value;
+    final calculatedSavings = budget - totalThisMonth;
+
+    // Calculate budget percentage used
+    final budgetPercentage = budget > 0 ? (totalThisMonth / budget * 100).clamp(0.0, 100.0) : 0.0;
 
     if (mounted) {
       setState(() {
         _recentExpenses = expenses.take(10).toList();
         _totalSpentThisMonth = totalThisMonth;
         _totalSpentLastMonth = totalLastMonth;
-        _savings = savings;
+        _savings = calculatedSavings;
         _budgetPercentage = budgetPercentage;
-        _categorySpending = categorySpending;
         _loading = false;
       });
     }
@@ -51,6 +53,175 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   String _formatAmount(double amount) {
     return NumberFormat('#,##0.00', 'en_US').format(amount);
+  }
+
+  String _formatCompact(double amount) {
+    final absAmount = amount.abs();
+    if (absAmount >= 10000000) {
+      return '${(absAmount / 10000000).toStringAsFixed(1)}Cr';
+    } else if (absAmount >= 100000) {
+      return '${(absAmount / 100000).toStringAsFixed(1)}L';
+    } else if (absAmount >= 1000) {
+      return '${(absAmount / 1000).toStringAsFixed(1)}K';
+    } else {
+      return absAmount.toStringAsFixed(0);
+    }
+  }
+
+  void _showBudgetDialog() {
+    final colors = context.colors;
+    final controller = TextEditingController(
+      text: budgetNotifier.isSet ? budgetNotifier.value.toStringAsFixed(0) : '',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surfaceContainerLow,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.onSurfaceDim,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Set Monthly Budget',
+                style: TextStyle(
+                  color: colors.onSurface,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Enter your monthly budget. Savings will be calculated as budget minus monthly spending.',
+                style: TextStyle(
+                  color: colors.onSurfaceDim,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      currencyNotifier.symbol,
+                      style: TextStyle(
+                        color: colors.primary,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        autofocus: true,
+                        style: TextStyle(
+                          color: colors.onSurface,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: '0',
+                          hintStyle: TextStyle(
+                            color: colors.onSurfaceDim,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: colors.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: colors.onSurfaceDim,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        final value = double.tryParse(controller.text) ?? 0;
+                        budgetNotifier.setBudget(value);
+                        Navigator.pop(context);
+                        loadData();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: colors.primary,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Save Budget',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   double _getPercentageChange() {
@@ -311,31 +482,23 @@ class DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    '${currencyNotifier.symbol}${_formatAmount(_savings.abs())}',
+                                    budgetNotifier.isSet
+                                        ? '${_savings >= 0 ? '' : '-'}${currencyNotifier.symbol}${_formatCompact(_savings.abs())}'
+                                        : '--',
                                     style: TextStyle(
-                                      color: colors.secondary,
+                                      color: _savings >= 0 ? colors.secondary : colors.error,
                                       fontSize: 24,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  Container(
-                                    height: 4,
-                                    decoration: BoxDecoration(
-                                      color: colors.surfaceContainerHigh,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                    child: FractionallySizedBox(
-                                      alignment: Alignment.centerLeft,
-                                      widthFactor: 0.6,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: colors.secondary,
-                                          borderRadius: BorderRadius.circular(
-                                            2,
-                                          ),
-                                        ),
-                                      ),
+                                  Text(
+                                    budgetNotifier.isSet
+                                        ? (_savings >= 0 ? 'Under budget' : 'Over budget')
+                                        : 'Set budget first',
+                                    style: TextStyle(
+                                      color: colors.onSurfaceDim,
+                                      fontSize: 11,
                                     ),
                                   ),
                                 ],
@@ -344,42 +507,68 @@ class DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: colors.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'BUDGETS',
-                                    style: TextStyle(
-                                      color: colors.onSurfaceDim,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 1,
+                            child: GestureDetector(
+                              onTap: _showBudgetDialog,
+                              child: Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: colors.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'BUDGET',
+                                          style: TextStyle(
+                                            color: colors.onSurfaceDim,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.edit,
+                                          color: colors.primary,
+                                          size: 16,
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    '${_budgetPercentage.toStringAsFixed(0)}%',
-                                    style: TextStyle(
-                                      color: colors.onSurface,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w700,
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      budgetNotifier.isSet
+                                          ? '${currencyNotifier.symbol}${_formatCompact(budgetNotifier.value)}'
+                                          : 'Tap to set',
+                                      style: TextStyle(
+                                        color: budgetNotifier.isSet ? colors.onSurface : colors.primary,
+                                        fontSize: budgetNotifier.isSet ? 24 : 18,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Used across ${_categorySpending.length} categories',
-                                    style: TextStyle(
-                                      color: colors.onSurfaceDim,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 4),
+                                    if (budgetNotifier.isSet)
+                                      Text(
+                                        '${_budgetPercentage.toStringAsFixed(0)}% used',
+                                        style: TextStyle(
+                                          color: _budgetPercentage > 80
+                                              ? colors.error
+                                              : colors.onSurfaceDim,
+                                          fontSize: 11,
+                                        ),
+                                      )
+                                    else
+                                      Text(
+                                        'Monthly budget',
+                                        style: TextStyle(
+                                          color: colors.onSurfaceDim,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

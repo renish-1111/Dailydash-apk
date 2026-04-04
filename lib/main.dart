@@ -114,12 +114,49 @@ class DarkModeNotifier extends ValueNotifier<bool> {
   }
 }
 
+class BudgetNotifier extends ValueNotifier<double> {
+  BudgetNotifier() : super(_initBudget());
+
+  static double _initBudget() {
+    // Check if we need to reset for a new month
+    final savedMonth = prefs.getInt('budgetMonth');
+    final savedYear = prefs.getInt('budgetYear');
+    final now = DateTime.now();
+
+    if (savedMonth != null && savedYear != null) {
+      // If it's a new month, keep the same budget (don't reset value)
+      // Just update the month/year tracking
+      if (savedMonth != now.month || savedYear != now.year) {
+        prefs.setInt('budgetMonth', now.month);
+        prefs.setInt('budgetYear', now.year);
+      }
+    } else {
+      // First time - set current month/year
+      prefs.setInt('budgetMonth', now.month);
+      prefs.setInt('budgetYear', now.year);
+    }
+
+    return prefs.getDouble('monthlyBudget') ?? 0;
+  }
+
+  void setBudget(double budget) {
+    value = budget;
+    prefs.setDouble('monthlyBudget', budget);
+    final now = DateTime.now();
+    prefs.setInt('budgetMonth', now.month);
+    prefs.setInt('budgetYear', now.year);
+  }
+
+  bool get isSet => value > 0;
+}
+
 final currencyNotifier = CurrencyNotifier();
 final languageNotifier = LanguageNotifier();
 final usernameNotifier = UsernameNotifier();
 final profileImageNotifier = ProfileImageNotifier();
 final notificationsNotifier = NotificationsNotifier();
 final darkModeNotifier = DarkModeNotifier();
+final budgetNotifier = BudgetNotifier();
 
 // Navigation notifier to switch tabs from child screens
 final navigationIndexNotifier = ValueNotifier<int>(0);
