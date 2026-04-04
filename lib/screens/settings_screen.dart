@@ -8,7 +8,7 @@ import '../main.dart'
         languageNotifier,
         usernameNotifier,
         profileImageNotifier,
-        notificationsNotifier;
+        darkModeNotifier;
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -38,6 +38,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'Hindi',
     'Portuguese',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    darkModeNotifier.addListener(_onThemeChange);
+  }
+
+  @override
+  void dispose() {
+    darkModeNotifier.removeListener(_onThemeChange);
+    super.dispose();
+  }
+
+  void _onThemeChange() {
+    setState(() {});
+  }
 
   void _showCurrencyPicker() {
     showModalBottomSheet(
@@ -473,46 +489,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   horizontal: 20,
                   vertical: 12,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: colors.primaryContainer.withValues(
-                              alpha: 0.2,
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            Icons.auto_awesome,
-                            color: colors.primary,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'DailyDash',
-                          style: TextStyle(
-                            color: colors.primary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    GestureDetector(
-                      onTap: () {},
-                      child: Icon(
-                        Icons.settings,
-                        color: colors.primary,
-                        size: 24,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'DailyDash',
+                  style: TextStyle(
+                    color: colors.primary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
 
@@ -560,34 +543,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              usernameNotifier.value,
-                              style: TextStyle(
-                                color: colors.onSurface,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Premium Member',
-                              style: TextStyle(
-                                color: colors.primary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              '${usernameNotifier.value.toLowerCase().replaceAll(' ', '.')}@dailydash.io',
-                              style: TextStyle(
-                                color: colors.onSurfaceDim,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          usernameNotifier.value,
+                          style: TextStyle(
+                            color: colors.onSurface,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                       GestureDetector(
@@ -605,8 +567,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 28),
 
-              // Notifications Section
-              _buildSectionHeader('NOTIFICATIONS', colors),
+              // Appearance Section
+              _buildSectionHeader('APPEARANCE', colors),
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -622,12 +584,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: colors.secondary.withValues(alpha: 0.15),
+                          color: colors.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
-                          Icons.notifications,
-                          color: colors.secondary,
+                          darkModeNotifier.value
+                              ? Icons.dark_mode
+                              : Icons.light_mode,
+                          color: colors.primary,
                           size: 22,
                         ),
                       ),
@@ -637,7 +601,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Push Notifications',
+                              'Dark Mode',
                               style: TextStyle(
                                 color: colors.onSurface,
                                 fontSize: 15,
@@ -645,7 +609,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                             Text(
-                              'Budget alerts and reports',
+                              darkModeNotifier.value
+                                  ? 'Neon Nocturne theme'
+                                  : 'Light theme enabled',
                               style: TextStyle(
                                 color: colors.onSurfaceDim,
                                 fontSize: 12,
@@ -655,11 +621,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       ValueListenableBuilder<bool>(
-                        valueListenable: notificationsNotifier,
-                        builder: (context, enabled, _) {
+                        valueListenable: darkModeNotifier,
+                        builder: (context, isDarkMode, _) {
                           return Switch(
-                            value: enabled,
-                            onChanged: (v) => notificationsNotifier.toggle(),
+                            value: isDarkMode,
+                            onChanged: (v) {
+                              darkModeNotifier.toggle();
+                              setState(() {});
+                            },
                             activeThumbColor: colors.primary,
                             activeTrackColor: colors.primary.withValues(
                               alpha: 0.4,

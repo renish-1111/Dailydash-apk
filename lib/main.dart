@@ -105,24 +105,42 @@ class NotificationsNotifier extends ValueNotifier<bool> {
   }
 }
 
+class DarkModeNotifier extends ValueNotifier<bool> {
+  DarkModeNotifier() : super(prefs.getBool('darkMode') ?? true);
+
+  void toggle() {
+    value = !value;
+    prefs.setBool('darkMode', value);
+  }
+}
+
 final currencyNotifier = CurrencyNotifier();
 final languageNotifier = LanguageNotifier();
 final usernameNotifier = UsernameNotifier();
 final profileImageNotifier = ProfileImageNotifier();
 final notificationsNotifier = NotificationsNotifier();
+final darkModeNotifier = DarkModeNotifier();
+
+// Navigation notifier to switch tabs from child screens
+final navigationIndexNotifier = ValueNotifier<int>(0);
 
 class DailyDashApp extends StatelessWidget {
   const DailyDashApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      locale: DevicePreview.locale(context),
-      builder: DevicePreview.appBuilder,
-      debugShowCheckedModeBanner: false,
-      title: 'DailyDash',
-      theme: DailyDashTheme.darkTheme,
-      home: const MainShell(),
+    return ValueListenableBuilder<bool>(
+      valueListenable: darkModeNotifier,
+      builder: (context, isDarkMode, _) {
+        return MaterialApp(
+          locale: DevicePreview.locale(context),
+          builder: DevicePreview.appBuilder,
+          debugShowCheckedModeBanner: false,
+          title: 'DailyDash',
+          theme: isDarkMode ? DailyDashTheme.darkTheme : DailyDashTheme.lightTheme,
+          home: const MainShell(),
+        );
+      },
     );
   }
 }
@@ -137,6 +155,33 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   final _dashboardKey = GlobalKey<DashboardScreenState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = navigationIndexNotifier.value;
+    navigationIndexNotifier.addListener(_onNavigationChange);
+    darkModeNotifier.addListener(_onThemeChange);
+  }
+
+  @override
+  void dispose() {
+    navigationIndexNotifier.removeListener(_onNavigationChange);
+    darkModeNotifier.removeListener(_onThemeChange);
+    super.dispose();
+  }
+
+  void _onNavigationChange() {
+    if (navigationIndexNotifier.value != _currentIndex) {
+      setState(() {
+        _currentIndex = navigationIndexNotifier.value;
+      });
+    }
+  }
+
+  void _onThemeChange() {
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {

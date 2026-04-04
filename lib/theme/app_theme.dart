@@ -4,7 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 // Extension to get theme-aware colors from BuildContext
 extension DailyDashColorsExtension on BuildContext {
   DailyDashColorScheme get colors {
-    return DailyDashColorScheme.dark();
+    final brightness = Theme.of(this).brightness;
+    return brightness == Brightness.dark
+        ? DailyDashColorScheme.dark()
+        : DailyDashColorScheme.light();
   }
 }
 
@@ -98,6 +101,45 @@ class DailyDashColorScheme {
     chartPink: Color(0xFFFF6B9D),
     chartOrange: Color(0xFFFFB347),
   );
+
+  // Light Theme
+  factory DailyDashColorScheme.light() => const DailyDashColorScheme(
+    // Surface hierarchy - Clean White foundation
+    background: Color(0xFFF5F5F7),
+    surface: Color(0xFFFFFFFF),
+    surfaceContainer: Color(0xFFF0F0F2),
+    surfaceContainerLow: Color(0xFFFFFFFF),
+    surfaceContainerHigh: Color(0xFFE8E8EC),
+    surfaceContainerHighest: Color(0xFFDDDDE2),
+    surfaceVariant: Color(0xFFF0F0F5),
+
+    // Primary - Electric Purple (slightly adjusted for light)
+    primary: Color(0xFFB060E0),
+    primaryContainer: Color(0xFFD37BFF),
+    primaryDim: Color(0xFF9050C0),
+
+    // Secondary - Cyan
+    secondary: Color(0xFF0099CC),
+    secondaryContainer: Color(0xFFE0F7FF),
+
+    // Text colors
+    onSurface: Color(0xFF1A1A1A),
+    onSurfaceVariant: Color(0xFF555555),
+    onSurfaceDim: Color(0xFF888888),
+
+    // Outlines
+    outlineVariant: Color(0xFFD0D0D0),
+
+    // Status colors
+    error: Color(0xFFE53E5E),
+    success: Color(0xFF0099CC),
+
+    // Chart colors
+    chartPurple: Color(0xFFB060E0),
+    chartCyan: Color(0xFF0099CC),
+    chartPink: Color(0xFFE5507D),
+    chartOrange: Color(0xFFE59030),
+  );
 }
 
 class DailyDashTheme {
@@ -120,6 +162,41 @@ class DailyDashTheme {
       ),
       textTheme: GoogleFonts.plusJakartaSansTextTheme(
         ThemeData.dark().textTheme,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: colors.surfaceContainerLow,
+        selectedItemColor: colors.primary,
+        unselectedItemColor: colors.onSurfaceDim,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
+    );
+  }
+
+  static ThemeData get lightTheme {
+    final colors = DailyDashColorScheme.light();
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: colors.background,
+      colorScheme: ColorScheme.light(
+        surface: colors.surface,
+        primary: colors.primary,
+        primaryContainer: colors.primaryContainer,
+        secondary: colors.secondary,
+        secondaryContainer: colors.secondaryContainer,
+        onSurface: colors.onSurface,
+        onSurfaceVariant: colors.onSurfaceVariant,
+        outline: colors.outlineVariant,
+        error: colors.error,
+      ),
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(
+        ThemeData.light().textTheme,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,

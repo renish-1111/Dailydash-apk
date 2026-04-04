@@ -1,7 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
-import '../main.dart' show repo, currencyNotifier;
+import '../main.dart' show repo, currencyNotifier, profileImageNotifier, navigationIndexNotifier;
 import '../models/expense.dart';
 import 'add_expense_screen.dart';
 
@@ -138,20 +139,34 @@ class DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Row(
                             children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: colors.primaryContainer.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  Icons.auto_awesome,
-                                  color: colors.primary,
-                                  size: 18,
-                                ),
+                              // Profile Avatar
+                              ValueListenableBuilder<String?>(
+                                valueListenable: profileImageNotifier,
+                                builder: (context, profileImage, _) {
+                                  return Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: colors.primaryContainer.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      shape: BoxShape.circle,
+                                      image: profileImage != null
+                                          ? DecorationImage(
+                                              image: FileImage(File(profileImage)),
+                                              fit: BoxFit.cover,
+                                            )
+                                          : null,
+                                    ),
+                                    child: profileImage == null
+                                        ? Icon(
+                                            Icons.person,
+                                            color: colors.primary,
+                                            size: 22,
+                                          )
+                                        : null,
+                                  );
+                                },
                               ),
                               const SizedBox(width: 12),
                               Text(
@@ -165,7 +180,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                           GestureDetector(
-                            onTap: () {},
+                            onTap: () => navigationIndexNotifier.value = 2,
                             child: Icon(
                               Icons.settings,
                               color: colors.onSurfaceDim,
