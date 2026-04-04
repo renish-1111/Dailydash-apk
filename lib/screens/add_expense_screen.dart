@@ -5,7 +5,9 @@ import '../main.dart' show repo, currencyNotifier;
 import '../models/expense.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  final Expense? expense; // For editing existing expense
+
+  const AddExpenseScreen({super.key, this.expense});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -17,6 +19,21 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   String _selectedPaymentMode = 'Credit Card';
   DateTime _selectedDateTime = DateTime.now();
   final _descriptionController = TextEditingController();
+
+  bool get _isEditing => widget.expense != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.expense != null) {
+      final e = widget.expense!;
+      _amount = e.amount.toString();
+      _selectedCategory = e.category;
+      _selectedPaymentMode = e.paymentMode;
+      _selectedDateTime = e.dateTime;
+      _descriptionController.text = e.description;
+    }
+  }
 
   final List<Map<String, dynamic>> _categories = [
     {'name': 'Food', 'icon': Icons.restaurant},
@@ -70,17 +87,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final amount = double.tryParse(_amount.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
 
-    await repo.insertExpense(
-      Expense(
-        amount: amount,
-        dateTime: _selectedDateTime,
-        description: _descriptionController.text.isEmpty
-            ? _selectedCategory
-            : _descriptionController.text,
-        category: _selectedCategory,
-        paymentMode: _selectedPaymentMode,
-      ),
+    final expense = Expense(
+      id: widget.expense?.id,
+      amount: amount,
+      dateTime: _selectedDateTime,
+      description: _descriptionController.text.isEmpty
+          ? _selectedCategory
+          : _descriptionController.text,
+      category: _selectedCategory,
+      paymentMode: _selectedPaymentMode,
     );
+
+    if (_isEditing) {
+      await repo.updateExpense(expense);
+    } else {
+      await repo.insertExpense(expense);
+    }
 
     if (mounted) Navigator.pop(context);
   }
@@ -401,7 +423,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Add Expense',
+                    _isEditing ? 'Edit Expense' : 'Add Expense',
                     style: TextStyle(
                       color: colors.onSurface,
                       fontSize: 28,
@@ -427,7 +449,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Amount Display
             Padding(
@@ -483,7 +505,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Category Row
             Padding(
@@ -518,7 +540,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
             // Category chips
             SizedBox(
-              height: 80,
+              height: 76,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -573,7 +595,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // Payment Mode & Date Time Row
             Padding(
@@ -683,7 +705,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // Description
             Padding(
@@ -746,11 +768,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // Confirm Button
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: GestureDetector(
                 onTap: _saveExpense,
                 child: Container(
@@ -773,7 +795,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Confirm Transaction',
+                        _isEditing ? 'Update Transaction' : 'Confirm Transaction',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 17,
@@ -799,7 +821,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   Widget _buildKeyRow(List<String> keys, DailyDashColorScheme colors) {
     return SizedBox(
-      height: 56,
+      height: 48,
       child: Row(
         children: keys.map((key) {
           return Expanded(

@@ -462,86 +462,176 @@ class DashboardScreenState extends State<DashboardScreen> {
     return widgets;
   }
 
+  Future<void> _deleteExpense(Expense expense) async {
+    final colors = context.colors;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colors.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Delete Transaction',
+          style: TextStyle(color: colors.onSurface, fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Are you sure you want to delete "${expense.description}"?',
+          style: TextStyle(color: colors.onSurfaceVariant),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: colors.onSurfaceDim)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Delete', style: TextStyle(color: colors.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && expense.id != null) {
+      await repo.deleteExpense(expense.id!);
+      loadData();
+    }
+  }
+
+  void _editExpense(Expense expense) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => AddExpenseScreen(expense: expense)),
+    ).then((_) => loadData());
+  }
+
   Widget _buildTransactionItem(Expense expense, DailyDashColorScheme colors) {
     final isIncome = expense.isIncome;
     final categoryColor = _getCategoryColor(expense.category, colors);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(20),
+    return Dismissible(
+      key: Key('expense_${expense.id}'),
+      background: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: colors.primary.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        alignment: Alignment.centerLeft,
+        child: Row(
+          children: [
+            Icon(Icons.edit, color: colors.primary, size: 24),
+            const SizedBox(width: 8),
+            Text('Edit', style: TextStyle(color: colors.primary, fontWeight: FontWeight.w600)),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          // Category indicator pill
-          Container(
-            width: 4,
-            height: 44,
-            decoration: BoxDecoration(
-              color: categoryColor,
-              borderRadius: BorderRadius.circular(2),
-            ),
+      secondaryBackground: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: colors.error.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        alignment: Alignment.centerRight,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text('Delete', style: TextStyle(color: colors.error, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 8),
+            Icon(Icons.delete, color: colors.error, size: 24),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          _editExpense(expense);
+          return false;
+        } else if (direction == DismissDirection.endToStart) {
+          await _deleteExpense(expense);
+          return false;
+        }
+        return false;
+      },
+      child: GestureDetector(
+        onTap: () => _editExpense(expense),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(width: 14),
-          // Icon
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: categoryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              _getCategoryIcon(expense.category),
-              color: categoryColor,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          // Title and category
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  expense.description,
-                  style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  expense.category,
-                  style: TextStyle(color: colors.onSurfaceDim, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          // Amount and time
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Row(
             children: [
-              Text(
-                '${isIncome ? '+' : '-'}${currencyNotifier.symbol}${_formatAmount(expense.amount)}',
-                style: TextStyle(
-                  color: isIncome ? colors.success : colors.onSurface,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+              // Category indicator pill
+              Container(
+                width: 4,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: categoryColor,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                DateFormat('hh:mm a').format(expense.dateTime),
-                style: TextStyle(color: colors.onSurfaceDim, fontSize: 12),
+              const SizedBox(width: 14),
+              // Icon
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: categoryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  _getCategoryIcon(expense.category),
+                  color: categoryColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              // Title and category
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      expense.description,
+                      style: TextStyle(
+                        color: colors.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      expense.category,
+                      style: TextStyle(color: colors.onSurfaceDim, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              // Amount and time
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${isIncome ? '+' : '-'}${currencyNotifier.symbol}${_formatAmount(expense.amount)}',
+                    style: TextStyle(
+                      color: isIncome ? colors.success : colors.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    DateFormat('hh:mm a').format(expense.dateTime),
+                    style: TextStyle(color: colors.onSurfaceDim, fontSize: 12),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
